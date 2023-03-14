@@ -39,6 +39,16 @@ def LoadEODPrices(Fundamentalpath,DataHousepath):
     EODPrices = EODPrices.drop_duplicates(subset=['code','date'],keep='last').reset_index(drop=True)
     return EODPrices
 
+def LoadCbondStockInfoAll(Fundamentalpath):
+    """
+    读取 CbondStockInfoAll 数据
+    """
+    #获取基本面信息数据
+    CbondStockInfoAll = pd.read_csv(Fundamentalpath+'/FundamentalData/CbondStockInfoAll.csv')
+    CbondStockInfoAll = CbondStockInfoAll[['secucode','convert_stock_code','transfer_start_date']].rename(columns={'secucode':'code'})
+    CbondStockInfoAll['transfer_start_date'] = CbondStockInfoAll.transfer_start_date.apply(lambda x: str(x)[:4]+str(x)[5:7]+str(x)[8:10])
+    return CbondStockInfoAll
+
 
 def listdir(path):
     """
