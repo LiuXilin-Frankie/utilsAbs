@@ -65,3 +65,58 @@ def LoadMinbar(path):
     minbar_day = minbar_day.loc[(minbar_day.min_time<1130)|(minbar_day.min_time>=1300),].reset_index(drop=True)
     minbar_day = minbar_day.drop_duplicates(['min_time','code'],keep='last')
     return minbar_day
+
+def LoadAShareEODPrices(DataHousepath):
+    """
+    获取所有正股每个交易日的OHLC等量价数据
+
+    Input:
+        - DataHousepath: 日频汇总存储路径
+    Output:
+        - AShareEODPrices: 日频汇总
+    """
+    AShareEODPrices = pd.read_parquet(DataHousepath+'AShareEODPrices.parquet')
+    AShareEODPrices = AShareEODPrices.rename(columns={'s_info_windcode':'code','trade_dt':'date'})
+    AShareEODPrices['date'] = AShareEODPrices['date'].astype(str)
+    #过滤掉交易时无法选择转股的可转债
+    AShareEODPrices = AShareEODPrices.drop_duplicates(subset=['code','date'],keep='last').reset_index(drop=True)
+    AShareEODPrices = AShareEODPrices.drop(['object_id'],axis=1).rename(columns={
+        's_dq_preclose':"preclose", 
+        's_dq_open':"open", 
+        's_dq_high':"high",
+        's_dq_low':"low", 
+        's_dq_close':"close", 
+        's_dq_change':"change", 
+        's_dq_pctchange':"pctchange",
+        's_dq_volume':"volume", 
+        's_dq_amount':"amount", 
+        's_dq_adjpreclose':"adjpreclose", 
+        's_dq_adjopen':"adjopen",
+        's_dq_adjhigh':"adjhigh", 
+        's_dq_adjlow':"adjlow", 
+        's_dq_adjclose':"adjclose", 
+        's_dq_adjfactor':"adjfactor",
+        's_dq_avgprice':"avgprice", 
+        's_dq_tradestatus':"tradestatus", 
+        's_dq_tradestatuscode':"tradestatuscode",
+        's_dq_limit':"limit", 
+        's_dq_stopping':"stopping", 
+        's_dq_adjclose_backward':"adjclose_backward"
+    })
+    AShareEODPrices = AShareEODPrices.sort_values(by=['date','code'])
+    return AShareEODPrices
+
+def GenLastKDay(AShareEODPrices,*args):
+    """
+    生成包含交易日以及过去K交易日的表单 方便merge
+
+    Input:
+        - AShareEODPrices: 日频量价总表单 用于生成交易日历
+        - args: 要生成的过去交易日的list
+    Output:
+        - TradingDate: 交易日历
+    """
+    TradingDate = pd.DataFrame(AShareEODPrices.date.unique().tolist(),columns=['date']).sort_values(by=['date'])
+    for k in args:
+        TradingDate['last'+str(k)+'day'] = TradingDate.date.shift(k).reset_index(drop=True)
+    return TradingDate.dropna(axis=0).reset_index(drop=True)
